@@ -53,3 +53,38 @@ export const deleteUser = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 }
+
+//GET /api/users?page=1&limit=5
+
+// GET users with pagination + search
+exports.getUsersPagination = async (req, res) => {
+    try {
+        let { page = 1, limit = 10, search = "" } = req.query; 
+        page = parseInt(page);
+        limit = parseInt(limit);
+
+        // Search filter (case-insensitive for name or email)
+        const query = {
+            $or: [
+                { name: { $regex: search, $options: "i" } },
+                { email: { $regex: search, $options: "i" } }
+            ]
+        };
+
+        const users = await User.find(query)
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        const totalUsers = await User.countDocuments(query);
+
+        res.json({
+            page,
+            limit,
+            totalPages: Math.ceil(totalUsers / limit),
+            totalUsers,
+            users
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
